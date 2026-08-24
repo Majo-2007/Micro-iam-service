@@ -18,4 +18,17 @@
     <junit.version>5.11.0</junit.version>
     <spring.boot.version>3.3.4</spring.boot.version>
   </properties>
+
+  <!-- BOM de Spring Boot: gestiona versiones de todos los starters/drivers de los módulos hijos -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring.boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 </project>
