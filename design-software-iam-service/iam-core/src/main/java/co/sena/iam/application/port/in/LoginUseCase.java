@@ -5,5 +5,6 @@ public interface LoginUseCase {
 
     record LoginCommand(String email, String rawPassword, String ipAddress, String userAgent) {}
 
-    record LoginResult(String accessToken, String tokenType, long expiresInSeconds) {}
+    /** refreshToken (HU-IAM-002): TTL de 7 días, se persiste solo su hash (session.refresh_token). */
+    record LoginResult(String accessToken, String refreshToken, String tokenType, long expiresInSeconds) {}
 }

@@ -3,12 +3,15 @@ package co.sena.iam.application.usecase;
 import co.sena.iam.application.port.in.LoginUseCase;
 import co.sena.iam.application.port.out.AuditLoginRepository;
 import co.sena.iam.application.port.out.PasswordHasher;
+import co.sena.iam.application.port.out.RefreshTokenCrypto;
+import co.sena.iam.application.port.out.RefreshTokenRepository;
 import co.sena.iam.application.port.out.TokenIssuer;
 import co.sena.iam.application.port.out.UserRepository;
 import co.sena.iam.domain.exception.AccountLockedException;
 import co.sena.iam.domain.exception.InvalidCredentialsException;
 import co.sena.iam.domain.model.AuditLoginEntry;
 import co.sena.iam.domain.model.LoginOutcome;
+import co.sena.iam.domain.model.RefreshToken;
 import co.sena.iam.domain.model.User;
 
 import java.time.Clock;
@@ -17,6 +20,7 @@ import java.util.Optional;
 
 /**
  * HU-IAM-001: inicio de sesión, bloqueo por intentos y auditoría.
+ * HU-IAM-002 (E1 origen): además de access_token emite y persiste el refresh_token (7 días).
  * E1 login OK · E2 credenciales inválidas · E3 bloqueo por RN-IAM-01.
  * Sin Spring: se instancia e inyecta desde iam-api (config de wiring hexagonal).
  */
@@ -26,17 +30,23 @@ public class LoginService implements LoginUseCase {
     private final AuditLoginRepository auditLoginRepository;
     private final PasswordHasher passwordHasher;
     private final TokenIssuer tokenIssuer;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenCrypto refreshTokenCrypto;
     private final Clock clock;
 
     public LoginService(UserRepository userRepository,
                          AuditLoginRepository auditLoginRepository,
                          PasswordHasher passwordHasher,
                          TokenIssuer tokenIssuer,
+                         RefreshTokenRepository refreshTokenRepository,
+                         RefreshTokenCrypto refreshTokenCrypto,
                          Clock clock) {
         this.userRepository = userRepository;
         this.auditLoginRepository = auditLoginRepository;
         this.passwordHasher = passwordHasher;
         this.tokenIssuer = tokenIssuer;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenCrypto = refreshTokenCrypto;
         this.clock = clock;
     }
 
@@ -69,7 +79,14 @@ public class LoginService implements LoginUseCase {
         audit(user.id(), command, LoginOutcome.SUCCESS, now);
 
         TokenIssuer.IssuedToken accessToken = tokenIssuer.issueAccessToken(user);
-        return new LoginResult(accessToken.value(), "Bearer", accessToken.expiresInSeconds());
+
+        String rawRefreshToken = refreshTokenCrypto.generateRawToken();
+        String refreshTokenHash = refreshTokenCrypto.hash(rawRefreshToken);
+        RefreshToken refreshToken = RefreshToken.issue(
+                user.id(), refreshTokenHash, command.userAgent(), command.ipAddress(), now);
+        refreshTokenRepository.save(refreshToken);
+
+        return new LoginResult(accessToken.value(), rawRefreshToken, "Bearer", accessToken.expiresInSeconds());
     }
 
     private void audit(java.util.UUID userId, LoginCommand command, LoginOutcome outcome, Instant now) {

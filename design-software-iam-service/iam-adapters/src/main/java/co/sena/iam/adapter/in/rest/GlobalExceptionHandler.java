@@ -3,6 +3,8 @@ package co.sena.iam.adapter.in.rest;
 import co.sena.iam.adapter.in.rest.dto.ErrorResponse;
 import co.sena.iam.domain.exception.AccountLockedException;
 import co.sena.iam.domain.exception.InvalidCredentialsException;
+import co.sena.iam.domain.exception.SessionNotFoundException;
+import co.sena.iam.domain.exception.TokenRevokedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -22,6 +24,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccountLocked(AccountLockedException ex) {
         return ResponseEntity.status(HttpStatus.LOCKED)
                 .body(new ErrorResponse("ACCOUNT_LOCKED", "Cuenta bloqueada hasta " + ex.lockedUntil() + "."));
+    }
+
+    @ExceptionHandler(TokenRevokedException.class)
+    public ResponseEntity<ErrorResponse> handleTokenRevoked() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse("TOKEN_REVOKED", "El refresh token fue revocado."));
+    }
+
+    @ExceptionHandler(SessionNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleSessionNotFound() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("SESSION_NOT_FOUND", "La sesión no existe o no pertenece al usuario."));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
