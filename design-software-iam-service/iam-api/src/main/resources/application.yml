@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: iam-service
+  datasource:
+    # Los 3 tienen default: corre out-of-the-box contra el Postgres de docker-infra
+    # (docker compose --env-file .env.example up postgres -d), sin exportar nada.
+    # Para otros ambientes, exporta IAM_DB_DSN / IAM_DB_USERNAME / IAM_DB_PASSWORD.
+    url: ${IAM_DB_DSN:jdbc:postgresql://localhost:15432/design-software-develop}
+    username: ${IAM_DB_USERNAME:design_software_app}
+    password: ${IAM_DB_PASSWORD:change-me-app}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+    generate-ddl: false
+    hibernate:
+      ddl-auto: validate
+  sql:
+    init:
+      mode: never
+
+# HU-IAM-010: secreto/TTL del JWT. En dev usa el default de abajo; en cualquier otro
+# ambiente exporta IAM_JWT_SECRET (>= 32 bytes) por variable de entorno.
+iam:
+  jwt:
+    secret: ${IAM_JWT_SECRET:change-me-change-me-change-me-change-me}
+    access-token-ttl-seconds: 900
+    issuer: iam-service
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
