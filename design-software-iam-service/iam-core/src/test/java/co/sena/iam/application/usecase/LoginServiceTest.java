@@ -3,12 +3,15 @@ package co.sena.iam.application.usecase;
 import co.sena.iam.application.port.in.LoginUseCase.LoginCommand;
 import co.sena.iam.application.port.out.AuditLoginRepository;
 import co.sena.iam.application.port.out.PasswordHasher;
+import co.sena.iam.application.port.out.RefreshTokenCrypto;
+import co.sena.iam.application.port.out.RefreshTokenRepository;
 import co.sena.iam.application.port.out.TokenIssuer;
 import co.sena.iam.application.port.out.UserRepository;
 import co.sena.iam.domain.exception.AccountLockedException;
 import co.sena.iam.domain.exception.InvalidCredentialsException;
 import co.sena.iam.domain.model.AuditLoginEntry;
 import co.sena.iam.domain.model.LoginOutcome;
+import co.sena.iam.domain.model.RefreshToken;
 import co.sena.iam.domain.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,12 +35,14 @@ class LoginServiceTest {
 
     private Map<String, User> usersByEmail;
     private List<AuditLoginEntry> auditTrail;
+    private Map<String, RefreshToken> refreshTokensByHash;
     private LoginService loginService;
 
     @BeforeEach
     void setUp() {
         usersByEmail = new HashMap<>();
         auditTrail = new ArrayList<>();
+        refreshTokensByHash = new HashMap<>();
 
         UserRepository userRepository = new UserRepository() {
             public Optional<User> findByEmail(String email) { return Optional.ofNullable(usersByEmail.get(email)); }
@@ -49,8 +54,19 @@ class LoginServiceTest {
         AuditLoginRepository auditLoginRepository = auditTrail::add;
         PasswordHasher passwordHasher = (raw, hash) -> raw.equals(hash);
         TokenIssuer tokenIssuer = user -> new TokenIssuer.IssuedToken("fake-jwt-" + user.id(), 900);
+        RefreshTokenRepository refreshTokenRepository = new RefreshTokenRepository() {
+            public void save(RefreshToken t) { refreshTokensByHash.put(t.tokenHash(), t); }
+            public Optional<RefreshToken> findByTokenHash(String h) { return Optional.ofNullable(refreshTokensByHash.get(h)); }
+            public Optional<RefreshToken> findByIdAndUserId(UUID id, UUID userId) { throw new UnsupportedOperationException(); }
+            public List<RefreshToken> findActiveByUserId(UUID userId, Instant now) { throw new UnsupportedOperationException(); }
+        };
+        RefreshTokenCrypto refreshTokenCrypto = new RefreshTokenCrypto() {
+            public String generateRawToken() { return UUID.randomUUID().toString(); }
+            public String hash(String rawToken) { return "hash-of-" + rawToken; }
+        };
 
-        loginService = new LoginService(userRepository, auditLoginRepository, passwordHasher, tokenIssuer, clock);
+        loginService = new LoginService(userRepository, auditLoginRepository, passwordHasher, tokenIssuer,
+                refreshTokenRepository, refreshTokenCrypto, clock);
     }
 
     private User newUser() {
@@ -66,9 +82,11 @@ class LoginServiceTest {
         var result = loginService.login(new LoginCommand(user.email(), "secret", "127.0.0.1", "junit"));
 
         assertNotNull(result.accessToken());
+        assertNotNull(result.refreshToken());
         assertEquals("Bearer", result.tokenType());
         assertEquals(0, user.failedAttempts());
         assertEquals(LoginOutcome.SUCCESS, auditTrail.get(0).outcome());
+        assertEquals(1, refreshTokensByHash.size());
     }
 
     @Test
