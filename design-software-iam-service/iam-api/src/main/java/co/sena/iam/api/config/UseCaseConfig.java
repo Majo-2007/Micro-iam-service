@@ -7,6 +7,7 @@ import co.sena.iam.application.port.out.RefreshTokenRepository;
 import co.sena.iam.application.port.out.TokenIssuer;
 import co.sena.iam.application.port.out.UserRepository;
 import co.sena.iam.application.usecase.GetCurrentUserService;
+import co.sena.iam.application.usecase.CatalogQueryService;
 import co.sena.iam.application.usecase.LoginService;
 import co.sena.iam.application.usecase.LogoutService;
 import co.sena.iam.application.usecase.RefreshAccessTokenService;
@@ -69,5 +70,13 @@ public class UseCaseConfig {
     @Bean
     public SessionManagementService sessionManagementService(RefreshTokenRepository refreshTokenRepository, Clock clock) {
         return new SessionManagementService(refreshTokenRepository, clock);
+    }
+
+    // HU-IAM-004: GET /modules, GET /roles, GET /roles/{id}/features
+    @Bean
+    public CatalogQueryService catalogQueryService(co.sena.iam.application.port.out.ModuleRepository moduleRepository,
+                                                     co.sena.iam.application.port.out.RoleRepository roleRepository,
+                                                     co.sena.iam.application.port.out.RoleFeatureRepository roleFeatureRepository) {
+        return new CatalogQueryService(moduleRepository, roleRepository, roleFeatureRepository);
     }
 }
