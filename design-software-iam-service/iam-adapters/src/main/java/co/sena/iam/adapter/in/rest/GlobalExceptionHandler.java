@@ -3,6 +3,7 @@ package co.sena.iam.adapter.in.rest;
 import co.sena.iam.adapter.in.rest.dto.ErrorResponse;
 import co.sena.iam.domain.exception.AccountLockedException;
 import co.sena.iam.domain.exception.InvalidCredentialsException;
+import co.sena.iam.domain.exception.RoleNotFoundException;
 import co.sena.iam.domain.exception.SessionNotFoundException;
 import co.sena.iam.domain.exception.TokenRevokedException;
 import org.springframework.http.HttpStatus;
@@ -36,6 +37,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleSessionNotFound() {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse("SESSION_NOT_FOUND", "La sesión no existe o no pertenece al usuario."));
+    }
+
+    @ExceptionHandler(RoleNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleRoleNotFound() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("ROLE_NOT_FOUND", "El rol no existe."));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

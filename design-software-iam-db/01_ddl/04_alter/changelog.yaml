@@ -62,6 +62,23 @@ databaseChangeLog:
             path: ../../05_rollbacks/01_ddl/04_alter/005_add_alter_identity_audit.rollback.sql
             relativeToChangelogFile: true
             stripComments: false
+
+  - changeSet:
+      id: 9c3e7a42-1f6b-4d89-a5e2-7b8c4f921d36
+      author: Kevin Stiven Lopez
+      labels: "HU-06-dev,ddl,base,alter"
+      comment: Adds password policy fields to identity user domain.
+      changes:
+        - sqlFile:
+            path: 006_add_alter_identity_password_policy.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/006_add_alter_identity_password_policy.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+            
   - changeSet:
       id: quality-fixes-iam-950
       author: jesus-gonzalez
